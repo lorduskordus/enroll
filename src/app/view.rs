@@ -1,0 +1,157 @@
+// SPDX-License-Identifier: MPL-2.0
+
+use crate::app::AppModel;
+use crate::app::Finger;
+use crate::app::message::Message;
+use crate::fl;
+use cosmic::iced::Length;
+use cosmic::iced::alignment::{Horizontal, Vertical};
+use cosmic::iced_widget::pick_list;
+use cosmic::widget;
+use cosmic::widget::{button, column, container, progress_bar, svg, text};
+use cosmic::{Apply, Element};
+const FPRINT_ICON: &[u8] = include_bytes!("../../resources/icons/hicolor/scalable/apps/fprint.svg");
+const STATUS_TEXT_SIZE: u16 = 16;
+const PROGRESS_BAR_HEIGHT: u16 = 10;
+pub(crate) const MAIN_PADDING: u16 = 20;
+pub(crate) const MAIN_SPACING: u16 = 20;
+
+impl AppModel {
+    pub(crate) fn view_experimental(&self) -> Element<'_, Message> {
+        column().width(Length::Fill).height(Length::Fill).into()
+    }
+
+    pub(crate) fn view_main(&self) -> Element<'_, Message> {
+        let mut column = column().push(self.view_header()).push(self.view_status());
+
+        if let Some(picker) = self.view_finger_picker() {
+            column = column.push(picker);
+        }
+
+        if let Some(progress) = self.view_progress() {
+            column = column.push(progress);
+        }
+
+        column
+            .push(self.view_icon())
+            .push(self.view_controls())
+            .align_x(Horizontal::Center)
+            .spacing(MAIN_SPACING)
+            .padding(MAIN_PADDING)
+            .into()
+    }
+
+    pub(crate) fn view_header(&self) -> Element<'_, Message> {
+        text::title1(fl!("app-title"))
+            .apply(container)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .into()
+    }
+
+    pub(crate) fn view_finger_picker(&self) -> Option<Element<'_, Message>> {
+        let mut vec = Vec::new();
+
+        for page in Finger::all() {
+            vec.push(page.localized_name())
+        }
+
+        Some(
+            pick_list(
+                vec,
+                Some(self.selected_finger.localized_name()),
+                Message::FingerSelected,
+            )
+            .width(Length::Fixed(200.0))
+            .apply(container)
+            .width(Length::Fill)
+            .align_x(Horizontal::Center)
+            .into(),
+        )
+    }
+
+    pub(crate) fn view_icon(&self) -> Element<'_, Message> {
+        svg(svg::Handle::from_memory(FPRINT_ICON))
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .into()
+    }
+
+    pub(crate) fn view_status(&self) -> Element<'_, Message> {
+        text(&self.status)
+            .size(STATUS_TEXT_SIZE)
+            .apply(widget::container)
+            .width(Length::Fill)
+            .align_x(Horizontal::Center)
+            .into()
+    }
+
+    pub(crate) fn view_progress(&self) -> Option<Element<'_, Message>> {
+        self.enrolling_finger.as_ref()?;
+
+        self.enroll_total_stages.map(|total| {
+            progress_bar(0.0..=(total as f32), self.enroll_progress as f32)
+                .height(PROGRESS_BAR_HEIGHT)
+                .into()
+        })
+    }
+
+    pub(crate) fn view_controls(&self) -> Element<'_, Message> {
+        let buttons_enabled =
+            !self.busy && self.device_path.is_some() && self.enrolling_finger.is_none();
+
+        let current_finger = self.selected_finger.as_finger_id();
+        let is_enrolled = if let Some(f) = current_finger {
+            self.enrolled_fingers.iter().any(|ef| ef == f)
+        } else {
+            !self.enrolled_fingers.is_empty()
+        };
+
+        let register_btn = button::text(fl!("register"));
+        let delete_btn = button::text(fl!("delete"));
+        let clear_btn = button::text(fl!("clear-device"));
+
+        let register_btn = if buttons_enabled && current_finger.is_some() {
+            register_btn.on_press(Message::Register)
+        } else {
+            register_btn
+        };
+
+        let delete_btn = if buttons_enabled && is_enrolled {
+            delete_btn.on_press(Message::Delete)
+        } else {
+            delete_btn
+        };
+
+        let clear_btn =
+            if !self.busy && self.device_path.is_some() && self.enrolling_finger.is_none() {
+                clear_btn.on_press(Message::ClearDevice)
+            } else {
+                clear_btn
+            };
+
+        let mut cancel_btn = button::text(fl!("cancel"));
+        if self.enrolling_finger.is_some() {
+            cancel_btn = cancel_btn.on_press(Message::EnrollStop);
+        }
+
+        let mut row = widget::row()
+            .push(register_btn)
+            .push(delete_btn)
+            .push(clear_btn);
+
+        if self.enrolling_finger.is_some() {
+            row = row.push(cancel_btn);
+        }
+
+        row.apply(widget::container)
+            .width(Length::Fill)
+            .height(Length::Fill)
+            .align_x(Horizontal::Center)
+            .align_y(Vertical::Center)
+            .padding(MAIN_PADDING)
+            .into()
+    }
+}

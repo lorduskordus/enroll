@@ -343,6 +343,7 @@ impl AppModel {
             .into()
     }
 
+    /// Settings menu
     pub fn settings(&self) -> Element<'_, Message> {
         let col = column().push(
             widget::checkbox("Experimental UI", self.config.experimental_ui).on_toggle(|value| {
