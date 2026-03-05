@@ -1,10 +1,11 @@
 // SPDX-License-Identifier: MPL-2.0
-use crate::accounts_dbus::{AccountsProxyBlocking, UserProxyBlocking};
-use crate::app::MenuAction;
 use crate::app::error::*;
 use crate::app::finger::*;
 use crate::app::fprint::*;
-use crate::app::message::*;
+use crate::app::message::Message;
+use crate::app::users::*;
+
+use crate::app::{ContextPage, MenuAction};
 use crate::config::Config;
 use crate::fl;
 use crate::fprint_dbus::DeviceProxy;
@@ -12,14 +13,13 @@ use crate::fprint_dbus::DeviceProxy;
 use cosmic::app::context_drawer;
 use cosmic::cosmic_config::{self, CosmicConfigEntry};
 use cosmic::iced::alignment::{Horizontal, Vertical};
-use cosmic::iced::widget::pick_list;
 use cosmic::iced::{Alignment, Length, Subscription};
+use cosmic::iced_widget::pick_list;
 use cosmic::prelude::*;
-use cosmic::widget::{self, dialog, menu, nav_bar, text};
+use cosmic::widget::{self, column, dialog, menu, nav_bar, settings::view_column, text};
 use cosmic::{cosmic_theme, theme};
 
 use futures_util::SinkExt;
-use nix::unistd::{Uid, User};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -32,53 +32,6 @@ const MAIN_SPACING: u16 = 20;
 const MAIN_PADDING: u16 = 20;
 
 use super::AppModel;
-
-/// Uses DBus synchronously to initialize users
-fn initialize_users() -> (Vec<UserOption>, nav_bar::Model, Option<UserOption>) {
-    let mut users = Vec::new();
-
-    if let Ok(conn) = zbus::blocking::Connection::system() {
-        if let Ok(accounts) = AccountsProxyBlocking::new(&conn) {
-            if let Ok(user_paths) = accounts.list_cached_users() {
-                for path in user_paths {
-                    if let Ok(builder) = UserProxyBlocking::builder(&conn).path(&path) {
-                        if let Ok(user_proxy) = builder.build() {
-                            if let (Ok(name), Ok(real_name), Ok(icon)) = (
-                                user_proxy.user_name(),
-                                user_proxy.real_name(),
-                                user_proxy.icon_file()
-                            ) {
-                                users.push(UserOption {
-                                    username: Arc::new(name),
-                                    realname: Arc::new(real_name),
-                                    icon: Arc::new(icon),
-                                });
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // TODO: to use actual icon need custom nav
-    let mut nav = nav_bar::Model::default();
-    let mut selected_user = None;
-    let current_username = User::from_uid(Uid::current())
-        .ok()
-        .flatten()
-        .map(|u| u.name);
-
-    // TODO: use actual icon
-    for user_opt in &users {
-        let id = nav.insert().text(user_opt.to_string()).icon(widget::icon::from_name("user-idle-symbolic")).id();
-        if selected_user.is_none() || current_username.as_deref() == Some(&*user_opt.username) {
-            nav.activate(id);
-            selected_user = Some(user_opt.clone());
-        }
-    }
-    (users, nav, selected_user)
-}
 
 /// Create a COSMIC application from the app model
 impl cosmic::Application for AppModel {

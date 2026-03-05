@@ -5,10 +5,7 @@ use std::{collections::HashMap, sync::Arc};
 use cosmic::widget::{menu, nav_bar};
 
 use crate::{
-    app::{
-        finger::{ContextPage, Finger},
-        message::{Message, UserOption},
-    },
+    app::{finger::Finger, message::Message, users::UserOption},
     config::Config,
     fprint_dbus::DeviceProxy,
 };
@@ -17,6 +14,7 @@ pub mod error;
 pub mod finger;
 pub mod fprint;
 pub mod message;
+pub mod users;
 
 /// The application model stores app-specific state used to describe its interface and
 /// drive its logic.
