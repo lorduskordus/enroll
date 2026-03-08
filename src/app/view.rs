@@ -18,7 +18,82 @@ pub(crate) const MAIN_SPACING: u16 = 20;
 
 impl AppModel {
     pub(crate) fn view_experimental(&self) -> Element<'_, Message> {
-        column().width(Length::Fill).height(Length::Fill).into()
+        let left_hand = widget::row()
+            .push(self.finger_button(Finger::LeftPinky, 110.0))
+            .push(self.finger_button(Finger::LeftRing, 140.0))
+            .push(self.finger_button(Finger::LeftMiddle, 150.0))
+            .push(self.finger_button(Finger::LeftIndex, 130.0))
+            .push(self.finger_button(Finger::LeftThumb, 100.0))
+            .spacing(10)
+            .align_y(Vertical::Bottom);
+
+        let right_hand = widget::row()
+            .push(self.finger_button(Finger::RightThumb, 100.0))
+            .push(self.finger_button(Finger::RightIndex, 130.0))
+            .push(self.finger_button(Finger::RightMiddle, 150.0))
+            .push(self.finger_button(Finger::RightRing, 140.0))
+            .push(self.finger_button(Finger::RightPinky, 110.0))
+            .spacing(10)
+            .align_y(Vertical::Bottom);
+
+        // let hands = widget::row()
+        //     .push(left_hand)
+        //     .push(right_hand)
+        //     .spacing(50)
+        //     .align_y(Vertical::Bottom);
+
+        let mut column = column()
+            .push(
+                container(left_hand)
+                    .width(Length::Fill)
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center)
+                    .padding(MAIN_PADDING),
+            )
+            .push(
+                container(right_hand)
+                    .width(Length::Fill)
+                    .align_x(Horizontal::Center)
+                    .align_y(Vertical::Center)
+                    .padding(MAIN_PADDING),
+            );
+
+        column = column.push(self.view_icon()).push(self.view_status());
+
+        if let Some(progress) = self.view_progress() {
+            column = column.push(progress);
+        }
+
+        column
+            .push(self.view_controls())
+            .align_x(Horizontal::Center)
+            .spacing(MAIN_SPACING)
+            .padding(MAIN_PADDING)
+            .into()
+    }
+
+    fn finger_button(&self, finger: Finger, height: f32) -> Element<'_, Message> {
+        let is_selected = self.selected_finger == finger;
+        let is_enrolled = finger
+            .as_finger_id()
+            .map_or(false, |id| self.enrolled_fingers.iter().any(|ef| ef == id));
+
+        let mut label = String::new();
+        if is_enrolled {
+            label.push_str("✓ ");
+        }
+        if is_selected {
+            label.push_str("[ ");
+        }
+        label.push_str(&finger.localized_name());
+        if is_selected {
+            label.push_str(" ]");
+        }
+
+        button::text(label)
+            .height(Length::Fixed(height))
+            .on_press(Message::FingerSelected(finger.localized_name()))
+            .into()
     }
 
     pub(crate) fn view_main(&self) -> Element<'_, Message> {
