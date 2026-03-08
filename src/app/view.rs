@@ -58,7 +58,7 @@ impl AppModel {
                     .padding(MAIN_PADDING),
             );
 
-        column = column.push(self.view_icon()).push(self.view_status());
+        column = column.push(self.view_status());
 
         if let Some(progress) = self.view_progress() {
             column = column.push(progress);
@@ -90,7 +90,8 @@ impl AppModel {
             label.push_str(" ]");
         }
 
-        button::text(label)
+        button::custom_image_button(widget::icon::from_svg_bytes(FPRINT_ICON).icon(), None)
+            //.label(label)
             .height(Length::Fixed(height))
             .on_press(Message::FingerSelected(finger.localized_name()))
             .into()
