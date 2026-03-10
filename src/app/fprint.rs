@@ -6,6 +6,12 @@ use crate::fprint_dbus::{DeviceProxy, ManagerProxy};
 use futures_util::sink::Sink;
 use futures_util::{SinkExt, StreamExt};
 
+/// **Returns** the default fingerprint reader device.
+/// *device:*
+/// The object path for the default device.
+/// # Errors
+/// ***net.reactivated.Fprint.Error.NoSuchDevice:***
+/// if the device does not exist
 pub async fn find_device(
     connection: &zbus::Connection,
 ) -> zbus::Result<(zbus::zvariant::OwnedObjectPath, DeviceProxy<'static>)> {
@@ -22,10 +28,14 @@ pub async fn find_device(
 /// # Return
 /// Array containing all users registered fingerprints as strings
 /// # Errors
-/// net.reactivated.Fprint.Error.PermissionDenied:
+/// ***net.reactivated.Fprint.Error.PermissionDenied:***
 /// if the caller lacks the appropriate PolicyKit authorization
-/// net.reactivated.Fprint.Error.NoEnrolledPrints:
+/// ***net.reactivated.Fprint.Error.NoEnrolledPrints:***
 /// if the chosen user doesn't have any fingerprints enrolled
+/// ***net.reactivated.Fprint.Error.AlreadyInUse:***
+/// if the device is already claimed
+/// ***net.reactivated.Fprint.Error.Internal:***
+/// if the device couldn't be claimed
 pub async fn list_enrolled_fingers_dbus(
     device: &DeviceProxy<'static>,
     username: String,
@@ -34,6 +44,18 @@ pub async fn list_enrolled_fingers_dbus(
     device.list_enrolled_fingers(&username).await
 }
 
+/// Deletes chosen fingers print record for single user
+/// # Returns
+/// Ok()
+/// # Errors
+/// ***net.reactivated.Fprint.Error.PermissionDenied:***
+/// if the caller lacks the appropriate PolicyKit authorization
+/// ***net.reactivated.Fprint.Error.PrintsNotDeleted:***
+/// if the fingerprint is not deleted from fprintd storage
+/// ***net.reactivated.Fprint.Error.AlreadyInUse:***
+/// if the device is already claimed
+/// ***net.reactivated.Fprint.Error.Internal:***
+/// if the device couldn't be claimed
 pub async fn delete_fingerprint_dbus(
     connection: &zbus::Connection,
     path: zbus::zvariant::OwnedObjectPath,
@@ -49,6 +71,18 @@ pub async fn delete_fingerprint_dbus(
     res.and(rel_res)
 }
 
+/// Deletes all print records for chosen user
+/// # Returns
+/// Ok()
+/// # Errors
+/// ***net.reactivated.Fprint.Error.PermissionDenied:***
+/// if the caller lacks the appropriate PolicyKit authorization
+/// ***net.reactivated.Fprint.Error.PrintsNotDeleted:***
+/// if the fingerprint is not deleted from fprintd storage
+/// ***net.reactivated.Fprint.Error.AlreadyInUse:***
+/// if the device is already claimed
+/// ***net.reactivated.Fprint.Error.Internal:***
+/// if the device couldn't be claimed
 pub async fn delete_fingers(
     connection: &zbus::Connection,
     path: zbus::zvariant::OwnedObjectPath,
@@ -62,6 +96,14 @@ pub async fn delete_fingers(
     device.release().await
 }
 
+/// Deletes all prints for all currently known users
+/// # Returns
+/// Ok()
+/// # Errors
+/// ***net.reactivated.Fprint.Error.PermissionDenied:***
+/// if the caller lacks the appropriate PolicyKit authorization
+/// ***net.reactivated.Fprint.Error.PrintsNotDeleted:***
+/// if the fingerprint is not deleted from fprintd storage
 pub async fn clear_all_fingers_dbus(
     connection: &zbus::Connection,
     path: zbus::zvariant::OwnedObjectPath,
@@ -106,6 +148,24 @@ pub async fn clear_all_fingers_dbus(
     }
 }
 
+/// Records a print into scanner devices. Does it by communicating via
+/// the net.reactived.Fprintd API with the device.
+///
+/// Updates status of the app through a Subscription.
+///
+/// # Returns
+/// Result(Ok(). Or Result(zbus::Error()))
+/// # Errors
+/// ***net.reactivated.Fprint.Error.PermissionDenied:***
+/// if the caller lacks the appropriate PolicyKit authorization
+/// ***net.reactivated.Fprint.Error.ClaimDevice:***
+/// if the device was not claimed
+/// ***net.reactivated.Fprint.Error.AlreadyInUse:***
+/// if the device was already being used
+/// ***net.reactivated.Fprint.Error.InvalidFingername:***
+/// if the finger name passed is invalid
+/// ***net.reactivated.Fprint.Error.Internal:***
+/// if there was an internal error
 pub async fn enroll_fingerprint_process<S>(
     connection: zbus::Connection,
     path: &zbus::zvariant::OwnedObjectPath,
@@ -184,17 +244,17 @@ where
 /// Request via DBus for the users fingerprint to be verified.
 ///
 /// # Errors
-///net.reactivated.Fprint.Error.PermissionDenied:
+/// ***net.reactivated.Fprint.Error.PermissionDenied:***
 /// if the caller lacks the appropriate PolicyKit authorization
-/// net.reactivated.Fprint.Error.ClaimDevice:
+/// ***net.reactivated.Fprint.Error.ClaimDevice:***
 /// if the device was not claimed
-/// net.reactivated.Fprint.Error.AlreadyInUse:
+/// ***net.reactivated.Fprint.Error.AlreadyInUse:***
 /// if the device was already being used
-/// net.reactivated.Fprint.Error.NoActionInProgress:
+/// ***net.reactivated.Fprint.Error.NoActionInProgress:***
 /// if there was no ongoing verification
-/// net.reactivated.Fprint.Error.NoEnrolledPrints:
+/// ***net.reactivated.Fprint.Error.NoEnrolledPrints:***
 /// if there are no enrolled prints for the chosen user
-/// net.reactivated.Fprint.Error.Internal:
+/// ***net.reactivated.Fprint.Error.Internal:***
 /// if there was an internal error
 pub async fn verify_finger_dbus(
     connection: &zbus::Connection,
