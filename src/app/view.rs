@@ -85,7 +85,7 @@ impl AppModel {
         let is_enrolled = finger
             .as_finger_id()
             .is_some_and(|id| self.enrolled_fingers.iter().any(|ef| ef == id));
-        let svg = svg(svg::Handle::from_memory(FPRINT_ICON));
+        let svg = svg(svg::Handle::from_memory(FPRINT_ICON)).symbolic(true);
         let mut label = finger.localized_name();
         if is_enrolled {
             label.push_str(" ✓");
@@ -97,8 +97,6 @@ impl AppModel {
             .on_press(Message::FingerSelected(finger.localized_name()))
             .selected(is_selected)
             .description(label)
-            //.label(label)
-            //.tooltip(label)
             .into()
     }
 
@@ -155,6 +153,7 @@ impl AppModel {
 
     pub(crate) fn view_icon(&self) -> Element<'_, Message> {
         svg(svg::Handle::from_memory(FPRINT_ICON))
+            .symbolic(true)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
