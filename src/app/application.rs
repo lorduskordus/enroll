@@ -353,6 +353,7 @@ impl AppModel {
         view_column(vec![col.into()]).into()
     }
 
+    /// Gets all registered prints for requested user
     pub(crate) fn list_fingers_task(&self) -> Task<cosmic::Action<Message>> {
         if let (Some(proxy), Some(user)) = (&self.device_proxy, &self.selected_user) {
             let proxy = proxy.clone();

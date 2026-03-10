@@ -38,12 +38,21 @@ pub enum Message {
     VerifyFinger,
 }
 
+// Section for handling of Messages
 impl AppModel {
+    /// Resets clear state
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_cancel_clear(&mut self) -> Task<cosmic::Action<Message>> {
         self.confirm_clear = false;
         Task::none()
     }
 
+    /// After succesfully removal of all prints set status, empties enrolled_fingers
+    ///
+    /// In case of an *Error* localizes the message and sets status
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_clear_completion(
         &mut self,
         res: Result<(), AppError>,
@@ -61,11 +70,17 @@ impl AppModel {
         Task::none()
     }
 
+    /// Opens in a browser clicked hyperlink
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_clicked_link(&mut self) -> Task<cosmic::Action<Message>> {
         let _ = open::that_detached(REPOSITORY);
         Task::none()
     }
 
+    /// After DBus connection is established searches queries it for fprintd default device
+    ///
+    /// **Returns** ***task_find_device***(*Connection*)
     pub(crate) fn on_connection_ready(
         &mut self,
         conn: zbus::Connection,
@@ -74,24 +89,12 @@ impl AppModel {
         self.status = fl!("status-searching-device");
 
         let conn_clone = conn.clone();
-        Task::perform(
-            async move {
-                match find_device(&conn_clone).await {
-                    Ok((path, proxy)) => Message::DeviceFound(Some((path, proxy))),
-                    Err(e) => {
-                        let error = AppError::from(e);
-                        if matches!(error, AppError::Unknown(_)) {
-                            Message::OperationError(AppError::DeviceNotFound)
-                        } else {
-                            Message::OperationError(error)
-                        }
-                    }
-                }
-            },
-            cosmic::Action::App,
-        )
+        task_find_device(conn_clone)
     }
 
+    /// Toggles the context page
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_context_page_toggle(
         &mut self,
         context_page: ContextPage,
@@ -107,6 +110,9 @@ impl AppModel {
         Task::none()
     }
 
+    /// Localizes the error and stores it on status resetting everything
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_error(&mut self, err: AppError) -> Task<cosmic::Action<Message>> {
         self.status = err.localized_message();
         self.busy = false;
@@ -114,6 +120,9 @@ impl AppModel {
         Task::none()
     }
 
+    /// Stores the results of list_fingers_task
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_fingers_listed(
         &mut self,
         fingers: Vec<String>,
@@ -122,6 +131,10 @@ impl AppModel {
         Task::none()
     }
 
+    /// If device is not busy compares localized string to fingers and set matching to be
+    /// the selected one
+    ///
+    /// **Returns** ***Task***()
     pub(crate) fn on_finger_selected(&mut self, finger: String) -> Task<cosmic::Action<Message>> {
         if self.busy {
             return Task::none();
@@ -355,4 +368,23 @@ impl AppModel {
         self.config = config;
         Task::none()
     }
+}
+
+fn task_find_device(conn_clone: zbus::Connection) -> Task<cosmic::Action<Message>> {
+    Task::perform(
+        async move {
+            match find_device(&conn_clone).await {
+                Ok((path, proxy)) => Message::DeviceFound(Some((path, proxy))),
+                Err(e) => {
+                    let error = AppError::from(e);
+                    if matches!(error, AppError::Unknown(_)) {
+                        Message::OperationError(AppError::DeviceNotFound)
+                    } else {
+                        Message::OperationError(error)
+                    }
+                }
+            }
+        },
+        cosmic::Action::App,
+    )
 }
