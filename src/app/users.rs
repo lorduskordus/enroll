@@ -5,7 +5,11 @@ use cosmic::widget::{icon, nav_bar};
 use nix::unistd::{Uid, User};
 use std::sync::Arc;
 
-/// Uses DBus synchronously to initialize users
+/// Uses DBus synchronously to initialize users, also creates nav_bar with information
+///
+/// Was an asynchronous task but chose that I'd like initialize nav_bar before use
+///
+/// **Returns** tuple of users, nav and current user
 pub fn initialize_users() -> (Vec<UserOption>, nav_bar::Model, Option<UserOption>) {
     let mut users = Vec::new();
 

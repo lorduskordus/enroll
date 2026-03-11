@@ -17,8 +17,10 @@ pub mod message;
 pub mod users;
 pub mod view;
 
-/// The application model stores app-specific state used to describe its interface and
-/// drive its logic.
+/// Application model stores app-specific state
+///
+/// Describes interface and
+/// drives its logic
 pub struct AppModel {
     /// Application state which is managed by the COSMIC runtime.
     core: cosmic::Core,
@@ -58,7 +60,7 @@ pub struct AppModel {
     confirm_clear: bool,
 }
 
-mod appl;
+mod application;
 
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MenuAction {
@@ -143,6 +145,11 @@ mod tests {
         assert!(matches!(
             action.message(),
             Message::ToggleContextPage(ContextPage::About)
+        ));
+        let settings_action = MenuAction::Settings;
+        assert!(matches!(
+            settings_action.message(),
+            Message::ToggleContextPage(ContextPage::Settings)
         ));
     }
 }

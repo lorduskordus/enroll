@@ -15,6 +15,9 @@ pub(crate) const MAIN_PADDING: u16 = 20;
 pub(crate) const MAIN_SPACING: u16 = 20;
 
 impl AppModel {
+    /// Used to construct the main view of application
+    ///
+    /// **Returns** column with one or two rows of button widgets
     pub(crate) fn view_main(&self) -> Element<'_, Message> {
         let left_hand = row()
             .push(self.finger_button(Finger::LeftPinky, 110.0))
@@ -80,28 +83,31 @@ impl AppModel {
             .into()
     }
 
+    /// Constructs custom_image_buttons for the main UI based on given height & Finger
+    ///
+    /// **Returns** an instance of custom_image_button widget
     fn finger_button(&self, finger: Finger, height: f32) -> Element<'_, Message> {
         let is_selected = self.selected_finger == finger;
         let is_enrolled = finger
             .as_finger_id()
             .is_some_and(|id| self.enrolled_fingers.iter().any(|ef| ef == id));
-        let svg = svg(svg::Handle::from_memory(FPRINT_ICON));
-        let mut label = finger.localized_name();
+        let mut svg = svg(svg::Handle::from_memory(FPRINT_ICON)).symbolic(true);
+        let label = text(finger.localized_name()).size(10);
         if is_enrolled {
-            label.push_str(" ✓");
+            svg = svg.opacity(0.7);
         }
+        let col = column().push(svg).push(label);
+        let container = container(col);
 
-        button::custom_image_button(svg, None)
+        button::custom_image_button(container, None)
             .width(40)
             .height(Length::Fixed(height))
             .on_press(Message::FingerSelected(finger.localized_name()))
             .selected(is_selected)
-            .description(label)
-            //.label(label)
-            //.tooltip(label)
             .into()
     }
 
+    /// The first UI version which can still be enabled from Settings
     pub(crate) fn view_old(&self) -> Element<'_, Message> {
         let mut column = column().push(self.view_header()).push(self.view_status());
 
@@ -122,6 +128,7 @@ impl AppModel {
             .into()
     }
 
+    /// Title for the traditional UI
     pub(crate) fn view_header(&self) -> Element<'_, Message> {
         text::title1(fl!("app-title"))
             .apply(container)
@@ -132,6 +139,9 @@ impl AppModel {
             .into()
     }
 
+    /// Generates a dropdown menu from which to choose which finger is registered
+    ///
+    /// **Returns** pick_list widget with all Fingers localized names
     pub(crate) fn view_finger_picker(&self) -> Option<Element<'_, Message>> {
         let mut vec = Vec::new();
 
@@ -153,13 +163,20 @@ impl AppModel {
         )
     }
 
+    /// Icon for traditional UI
+    ///
+    /// **Returns** svg widget from *FPRINT_ICON*
     pub(crate) fn view_icon(&self) -> Element<'_, Message> {
         svg(svg::Handle::from_memory(FPRINT_ICON))
+            .symbolic(true)
             .width(Length::Fill)
             .height(Length::Fill)
             .into()
     }
 
+    /// Used to render the current AppModel status in main view
+    ///
+    /// **Returns** text widget in a container
     pub(crate) fn view_status(&self) -> Element<'_, Message> {
         text(&self.status)
             .size(STATUS_TEXT_SIZE)
@@ -169,6 +186,10 @@ impl AppModel {
             .into()
     }
 
+    /// Generates a bar reflecting how many succesful attempts away
+    /// enrolling print is
+    ///
+    /// **Returns** progress_bar widget from *0* to *num_enroll_steps*
     pub(crate) fn view_progress(&self) -> Option<Element<'_, Message>> {
         self.enrolling_finger.as_ref()?;
 
@@ -176,6 +197,11 @@ impl AppModel {
             .map(|total| progress_bar(0.0..=(total as f32), self.enroll_progress as f32).into())
     }
 
+    /// State dependent generation for main controls of the application:
+    ///
+    /// *Register*, *Delete*, *Verify* & *Cancel*
+    ///
+    /// **Returns** row widget containing text button widget
     pub(crate) fn view_controls(&self) -> Element<'_, Message> {
         let buttons_enabled =
             !self.busy && self.device_path.is_some() && self.enrolling_finger.is_none();
