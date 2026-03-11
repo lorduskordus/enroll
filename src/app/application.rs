@@ -64,6 +64,7 @@ impl cosmic::Application for AppModel {
             connection: None,
             busy: true,
             enrolling_finger: None,
+            verifying_finger: false,
             enroll_progress: 0,
             enroll_total_stages: None,
             users,

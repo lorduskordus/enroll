@@ -45,6 +45,8 @@ pub struct AppModel {
     busy: bool,
     // Finger currently being enrolled (None if not enrolling)
     enrolling_finger: Option<Arc<String>>,
+    // Whether verifying a finger
+    verifying_finger: bool,
     // Enrollment progress
     enroll_progress: u32,
     // If device supports num_enroll_stages a Some(u32) else None
