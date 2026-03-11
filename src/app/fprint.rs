@@ -256,12 +256,17 @@ where
 /// if there are no enrolled prints for the chosen user
 /// ***net.reactivated.Fprint.Error.Internal:***
 /// if there was an internal error
-pub async fn verify_finger_dbus(
+pub async fn verify_finger_dbus<S>(
     connection: &zbus::Connection,
     path: zbus::zvariant::OwnedObjectPath,
     finger: String,
     username: String,
-) -> zbus::Result<()> {
+    output: &mut S,
+) -> zbus::Result<()>
+where
+    S: Sink<Message> + Unpin + Send,
+    S::Error: std::fmt::Debug + Send,
+{
     validate_username(&username)?;
     let device = DeviceProxy::builder(connection).path(path)?.build().await?;
 

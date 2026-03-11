@@ -69,23 +69,6 @@ pub fn task_enroll_stop(
 }
 
 /// **Returns** ***Task*** which:
-/// Requests print of the user to be matched against finger on the sensor
-pub fn task_verify_finger(
-    path: zbus::zvariant::OwnedObjectPath,
-    username: String,
-    finger: String,
-    conn: zbus::Connection,
-) -> Task<cosmic::Action<Message>> {
-    Task::perform(
-        async move { verify_finger_dbus(&conn, path, finger, username).await },
-        |res| match res {
-            Ok(()) => cosmic::Action::App(Message::Success),
-            Err(e) => cosmic::Action::App(Message::OperationError(AppError::from(e))),
-        },
-    )
-}
-
-/// **Returns** ***Task*** which:
 ///
 /// Requests deletion of all prints for all users
 pub fn task_clear_device(

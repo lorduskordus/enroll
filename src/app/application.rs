@@ -237,6 +237,64 @@ impl cosmic::Application for AppModel {
             }));
         }
 
+        // Add verify subscription if verifying
+        if self.verifying_finger
+            && let (Some(device_path), Some(connection), Some(user)) =
+                (&self.device_path, &self.connection, &self.selected_user)
+        {
+            #[derive(Clone)]
+            struct VerifyData {
+                device_path: std::sync::Arc<zbus::zvariant::OwnedObjectPath>,
+                connection: zbus::Connection,
+                username: std::sync::Arc<String>,
+                finger: String,
+            }
+
+            impl std::hash::Hash for VerifyData {
+                fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+                    self.username.hash(state);
+                    self.finger.hash(state);
+                }
+            }
+
+            let data = VerifyData {
+                device_path: device_path.clone(),
+                connection: connection.clone(),
+                username: user.username.clone(),
+                finger: self
+                    .selected_finger
+                    .as_finger_id()
+                    .unwrap_or_default()
+                    .to_string(),
+            };
+
+            subscriptions.push(Subscription::run_with(data, |data| {
+                let data = data.clone();
+                cosmic::iced::stream::channel(100, move |mut output: Sender<Message>| async move {
+                    let path = (*data.device_path).clone();
+                    let username = (*data.username).clone();
+
+                    match verify_finger_dbus(
+                        &data.connection,
+                        path,
+                        data.finger,
+                        username,
+                        &mut output,
+                    )
+                    .await
+                    {
+                        Ok(_) => {}
+                        Err(e) => {
+                            let _ = output
+                                .send(Message::OperationError(AppError::from(e)))
+                                .await;
+                        }
+                    }
+                    futures_util::future::pending().await
+                })
+            }));
+        }
+
         Subscription::batch(subscriptions)
     }
 
