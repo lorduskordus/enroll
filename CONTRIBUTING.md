@@ -25,3 +25,7 @@ It is recommended to build a source tarball with the vendored dependencies, whic
 ### Flatpak
 
 Every build generates a .flatpak artifact.
+
+[fluent]: https://projectfluent.org/
+[iso-codes]: https://en.wikipedia.org/wiki/ISO_639-1
+[fluent-guide]: https://projectfluent.org/fluent/guide/
