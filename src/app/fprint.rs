@@ -285,17 +285,24 @@ where
         return Err(e);
     }
 
-    // TODO: send reference to self and implement Message::VerifyStatus(String)
     while let Some(signal) = status_stream.next().await {
         match signal.args() {
             Ok(args) => {
-                let _result: String = args.result;
+                let result: String = args.result;
                 let done: bool = args.done;
+
+                let _ = output.send(Message::VerifyStatus(result, done)).await;
+
                 if done {
                     break;
                 }
             }
             Err(_e) => {
+                let _ = output
+                    .send(Message::OperationError(AppError::Unknown(
+                        "Failed to parse signal".to_string(),
+                    )))
+                    .await;
                 break;
             }
         }

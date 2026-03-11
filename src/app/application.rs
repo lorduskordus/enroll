@@ -323,7 +323,7 @@ impl cosmic::Application for AppModel {
             Message::UpdateConfig(config) => self.on_update_config(config),
             Message::LaunchUrl(url) => self.on_open_link(url),
             Message::VerifyFinger => self.on_verify_finger(),
-            Message::Success => self.on_success(),
+            Message::VerifyStatus(status, done) => self.on_verify_status(status, done),
         }
     }
 

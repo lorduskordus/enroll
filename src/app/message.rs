@@ -22,7 +22,6 @@ pub enum Message {
     LaunchUrl(String),
     Delete,
     Register,
-    Success,
     ConnectionReady(zbus::Connection),
     DeviceFound(Option<(zbus::zvariant::OwnedObjectPath, DeviceProxy<'static>)>),
     OperationError(AppError),
@@ -36,6 +35,7 @@ pub enum Message {
     EnrolledFingers(Vec<String>),
     FingerSelected(String),
     VerifyFinger,
+    VerifyStatus(String, bool),
 }
 
 // Section for handling of Messages
@@ -178,22 +178,44 @@ impl AppModel {
 
     /// Called to request verification of the selected print
     ///
-    /// **Returns** either ***Task***() or ***task_verify_finger***()
+    /// **Returns** ***Task***()
     pub(crate) fn on_verify_finger(&mut self) -> Task<cosmic::Action<Message>> {
-        if let (Some(path), Some(conn), Some(user)) = (
-            self.device_path.clone(),
-            self.connection.clone(),
-            self.selected_user.clone(),
-        ) {
-            self.busy = true;
-            let path = (*path).clone();
-            let username = user.username.to_string();
-            let finger = self
-                .selected_finger
-                .as_finger_id()
-                .unwrap_or_default()
-                .to_string();
-            return task_verify_finger(path, username, finger, conn);
+        self.busy = true;
+        self.verifying_finger = true;
+        self.status = fl!("status-starting-verification");
+        Task::none()
+    }
+
+    /// Handles verification status updates
+    ///
+    /// **Returns** ***Task***()
+    pub(crate) fn on_verify_status(
+        &mut self,
+        status: String,
+        done: bool,
+    ) -> Task<cosmic::Action<Message>> {
+        // Here you could map verify-* strings to localized messages
+        // Currently we'll fallback to showing the string directly or success message if done
+        let status_msg = match status.as_str() {
+            "verify-match" => fl!("verify-match"),
+            "verify-no-match" => fl!("verify-no-match"),
+            "verify-retry-scan" => fl!("verify-retry-scan"),
+            "verify-swipe-too-short" => fl!("verify-swipe-too-short"),
+            "verify-finger-not-centered" => fl!("verify-finger-not-centered"),
+            "verify-remove-and-retry" => fl!("verify-remove-and-retry"),
+            "verify-too-fast" => fl!("verify-too-fast"),
+            "verify-disconnected" => fl!("verify-disconnected"),
+            "verify-unknown-error" => fl!("verify-unknown-error"),
+            _ => status.clone(),
+        };
+        self.status = status_msg;
+
+        if done {
+            self.busy = false;
+            self.verifying_finger = false;
+            if status == "verify-match" {
+                return self.on_success();
+            }
         }
         Task::none()
     }
