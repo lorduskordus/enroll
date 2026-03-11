@@ -43,3 +43,4 @@
   - Refactored user options
 0.5.3: New alternative UI & config option for it
 0.5.4: Default UI is the new one
+0.5.5: Symbolic SVGs & commiting config changes to disk
