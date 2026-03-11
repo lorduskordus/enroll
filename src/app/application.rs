@@ -1,21 +1,21 @@
 // SPDX-License-Identifier: MPL-2.0
-use crate::app::error::*;
-use crate::app::finger::*;
-use crate::app::fprint::*;
+use crate::app::tasks::{task_config, task_connect};
+use crate::app::{error::*, finger::*, fprint::*, users::*};
+
 use crate::app::message::{Message, REPOSITORY};
-use crate::app::users::*;
 use crate::app::{ContextPage, MenuAction};
 use crate::config::Config;
 use crate::fl;
 
-use cosmic::Application;
-use cosmic::app::context_drawer;
-use cosmic::cosmic_config::{self, CosmicConfigEntry};
-use cosmic::iced::futures::channel::mpsc::Sender;
+use cosmic::{app::context_drawer, iced::futures::channel::mpsc::Sender};
+
 use cosmic::iced::{Alignment, Subscription};
-use cosmic::prelude::*;
-use cosmic::widget::{self, button, column, dialog, menu, nav_bar, settings::view_column, text};
-use cosmic::{cosmic_theme, theme};
+use cosmic::{
+    cosmic_theme,
+    prelude::*,
+    theme,
+    widget::{self, button, column, dialog, menu, nav_bar, settings::view_column, text},
+};
 
 use super::AppModel;
 use futures_util::SinkExt;
@@ -74,8 +74,8 @@ impl cosmic::Application for AppModel {
         };
 
         let command = app.update_title_task();
-        let connect_task = app.connect_task();
-        let config_task = app.config_task();
+        let connect_task = task_connect();
+        let config_task = task_config(Self::APP_ID.to_string());
 
         (app, Task::batch(vec![command, connect_task, config_task]))
     }
@@ -287,6 +287,7 @@ impl cosmic::Application for AppModel {
     }
 }
 
+// TODO: about & settings could be in view. others in tasks.
 impl AppModel {
     /// The about page for this app.
     pub fn about(&self) -> Element<'_, Message> {
@@ -371,49 +372,6 @@ impl AppModel {
             );
         }
         Task::none()
-    }
-
-    /// Task that connects to DBus
-    pub fn connect_task(&self) -> Task<cosmic::Action<Message>> {
-        Task::perform(
-            async move {
-                match zbus::Connection::system().await {
-                    Ok(conn) => Message::ConnectionReady(conn),
-                    Err(e) => Message::OperationError(AppError::ConnectDbus(e.to_string())),
-                }
-            },
-            cosmic::Action::App,
-        )
-    }
-
-    /// Task to parses the configuration
-    pub fn config_task(&self) -> Task<cosmic::Action<Message>> {
-        Task::perform(
-            async move {
-                let config = tokio::task::spawn_blocking(move || {
-                    cosmic_config::Config::new(Self::APP_ID, Config::VERSION)
-                        .map(|context| match Config::get_entry(&context) {
-                            Ok(config) => config,
-                            Err((errors, config)) => {
-                                for why in errors {
-                                    tracing::error!(%why, "error loading app config");
-                                }
-
-                                config
-                            }
-                        })
-                        .unwrap_or_default()
-                })
-                .await
-                .unwrap_or_else(|e| {
-                    tracing::error!("Config task join error: {}", e);
-                    Config::default()
-                });
-
-                Message::UpdateConfig(config)
-            },
-            cosmic::Action::App,
-        )
     }
 
     /// Updates the header and window titles.

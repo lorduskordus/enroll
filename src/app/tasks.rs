@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: MPL-2.0
 
-use crate::app::error::AppError;
-use crate::app::fprint::*;
-use crate::app::message::Message;
+use crate::app::{error::AppError, fprint::*, message::Message};
+use crate::config::Config;
 use crate::fprint_dbus::*;
 use cosmic::Task;
+use cosmic::cosmic_config::{self, CosmicConfigEntry};
 
 pub fn task_delete_prints(
     path: zbus::zvariant::OwnedObjectPath,
@@ -104,6 +104,49 @@ pub fn task_find_device(conn_clone: zbus::Connection) -> Task<cosmic::Action<Mes
                     }
                 }
             }
+        },
+        cosmic::Action::App,
+    )
+}
+
+/// Task that connects to DBus
+pub fn task_connect() -> Task<cosmic::Action<Message>> {
+    Task::perform(
+        async move {
+            match zbus::Connection::system().await {
+                Ok(conn) => Message::ConnectionReady(conn),
+                Err(e) => Message::OperationError(AppError::ConnectDbus(e.to_string())),
+            }
+        },
+        cosmic::Action::App,
+    )
+}
+
+/// Task to parses the configuration
+pub fn task_config(app_id: String) -> Task<cosmic::Action<Message>> {
+    Task::perform(
+        async move {
+            let config = tokio::task::spawn_blocking(move || {
+                cosmic_config::Config::new(&app_id, Config::VERSION)
+                    .map(|context| match Config::get_entry(&context) {
+                        Ok(config) => config,
+                        Err((errors, config)) => {
+                            for why in errors {
+                                tracing::error!(%why, "error loading app config");
+                            }
+
+                            config
+                        }
+                    })
+                    .unwrap_or_default()
+            })
+            .await
+            .unwrap_or_else(|e| {
+                tracing::error!("Config task join error: {}", e);
+                Config::default()
+            });
+
+            Message::UpdateConfig(config)
         },
         cosmic::Action::App,
     )
