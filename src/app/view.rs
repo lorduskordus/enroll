@@ -227,7 +227,7 @@ impl AppModel {
             register_btn
         };
 
-        let verify_btn = if buttons_enabled && current_finger.is_some() {
+        let verify_btn = if buttons_enabled && is_enrolled {
             verify_btn.on_press(Message::VerifyFinger)
         } else {
             verify_btn
