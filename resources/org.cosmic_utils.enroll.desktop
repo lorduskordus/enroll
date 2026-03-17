@@ -6,6 +6,6 @@ Icon=org.cosmic_utils.enroll
 Exec=cosmic-utils-enroll %F
 Terminal=false
 StartupNotify=true
-Categories=Utility;COSMIC;
+Categories=Utility;System;
 Keywords=Fingerprint;Security;
 MimeType=
