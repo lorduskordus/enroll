@@ -1,11 +1,14 @@
+### 1.0.4:
+	• Add ashpd for Flatpak theming support
+	• Updated app metadata
 ### 1.0.3:
-  Fixes a bug in Verify option
+	Fixes a bug in Verify option
 ### 1.0.2:
-  • Fixes Verify being active for unenrolled fingers
-  • Add cargo-source.json for Flathub
+	• Fixes Verify being active for unenrolled fingers
+	• Add cargo-source.json for Flathub
 ### 1.0.1:
-  • Changed navigation bar default toggle state
-  • Pushed Cargo.lock for Flathub
+	• Changed navigation bar default toggle state
+	• Pushed Cargo.lock for Flathub
 ### 1.0.0:
 	• First fully featured release
 	• Adds Settings section for installing dependencies
